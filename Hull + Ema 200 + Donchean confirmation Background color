@@ -1,0 +1,105 @@
+//@version=4
+// Hull Suite + EMA 200 + Donchian Agreement Background
+study("Hull Suite + EMA 200 + Trend Agreement BG", overlay=true)
+
+// =========================
+// INPUT
+// =========================
+src = input(close, title="Source")
+
+modeSwitch = input("Hma", title="Hull Variation", options=["Hma", "Thma", "Ehma"])
+length     = input(55, title="Hull Length")
+lengthMult = input(1.0, title="Hull Length Multiplier")
+
+useHtf = input(false, title="Show Hull MA from X timeframe?")
+htf    = input("240", title="Higher timeframe", type=input.resolution)
+
+switchColor    = input(true, "Color Hull according to trend?")
+visualSwitch   = input(true, title="Show Hull as Band?")
+thicknesSwitch = input(1, title="Line Thickness")
+transpSwitch   = input(40, title="Band Transparency", step=5)
+
+// Donchian input (LOGIC ONLY)
+dlen = input(20, title="Donchian Channel Period", minval=10)
+
+// =========================
+// HULL FUNCTIONS (v4 SAFE)
+// =========================
+HMA(_src, _length) =>
+    wma(2 * wma(_src, _length / 2) - wma(_src, _length), round(sqrt(_length)))
+
+EHMA(_src, _length) =>
+    ema(2 * ema(_src, _length / 2) - ema(_src, _length), round(sqrt(_length)))
+
+// ⚠️ FIXED: SINGLE LINE ONLY (v4 SAFE)
+THMA(_src, _length) =>
+    wma(wma(_src, _length / 3) * 3 - wma(_src, _length / 2) - wma(_src, _length), _length)
+
+// =========================
+// HULL MODE SWITCH (v4 SAFE)
+// =========================
+Mode(mode, src, len) =>
+    result = 0.0
+    if mode == "Hma"
+        result := HMA(src, len)
+    else if mode == "Ehma"
+        result := EHMA(src, len)
+    else if mode == "Thma"
+        result := THMA(src, len / 2)
+    result
+
+// =========================
+// HULL CALCULATION
+// =========================
+_hull = Mode(modeSwitch, src, int(length * lengthMult))
+HULL  = useHtf ? security(syminfo.ticker, htf, _hull) : _hull
+
+MHULL = HULL
+SHULL = HULL[2]
+
+// Hull trend
+hullUp   = MHULL > SHULL
+hullDown = MHULL < SHULL
+
+// =========================
+// EMA 200
+// =========================
+ema200 = ema(close, 200)
+plot(ema200, title="EMA 200", color=color.yellow, linewidth=2)
+
+// =========================
+// HULL COLOR & PLOT
+// =========================
+hullColor = switchColor ? (hullUp ? color.green : color.red) : color.orange
+
+p1 = plot(MHULL, title="MHULL", color=hullColor, linewidth=thicknesSwitch)
+p2 = plot(visualSwitch ? SHULL : na, title="SHULL", color=hullColor, linewidth=thicknesSwitch)
+
+fill(p1, p2, color=color.new(hullColor, transpSwitch))
+
+// =========================
+// DONCHIAN TREND (LOGIC ONLY)
+// =========================
+donchianTrend(len) =>
+    hh = highest(len)
+    ll = lowest(len)
+    trend = 0
+    trend := close > hh[1] ? 1 :
+             close < ll[1] ? -1 :
+             nz(trend[1])
+
+maintrend = donchianTrend(dlen)
+
+// =========================
+// BACKGROUND CONFIRMATION
+// =========================
+longZone  = maintrend == 1  and hullUp
+shortZone = maintrend == -1 and hullDown
+
+bgCol = color.new(color.black, 100)
+if longZone
+    bgCol := color.new(color.green, 85)
+else if shortZone
+    bgCol := color.new(color.red, 85)
+
+bgcolor(bgCol)

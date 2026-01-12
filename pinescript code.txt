@@ -1,0 +1,37 @@
+//@version=5
+indicator("Super Secret 200 EMA", overlay=true)
+
+length = input(10, "Supertrend Length")
+multiplier = input.float(3.0, "Supertrend Multiplier")
+emaPeriod = input(200, "EMA Period")
+
+// Calculate Supertrend
+var float supertrend = na
+var float highestHigh = na
+var float lowestLow = na
+
+for i = length to 1
+    if ta.change(close[i]) > 0
+        highestHigh := math.max(highestHigh, high[i])
+    else
+        lowestLow := math.min(lowestLow, low[i])
+        
+    supertrend := ta.change(close) > 0 ? lowestLow + multiplier * ta.atr(length) : highestHigh - multiplier * ta.atr(length)
+
+supertrendColor = supertrend > ta.ema(close, emaPeriod) ? color.green : color.red
+
+// Calculate 200 EMA
+ema200 = ta.ema(close, emaPeriod)
+emaColor = close > ema200 ? color.green : color.red
+
+// Plot Supertrend and EMA
+plot(supertrend, color=supertrendColor, title="Supertrend")
+plot(ema200, color=emaColor, title="200 EMA")
+
+// Determine Buy and Sell Conditions
+buyCondition = ta.crossover(close, ema200) and close > supertrend
+sellCondition = ta.crossunder(close, ema200) and close < supertrend
+
+// Plot Buy and Sell Signals
+plotshape(buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy")
+plotshape(sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell")
