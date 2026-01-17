@@ -1,0 +1,36 @@
+//@version=4
+study("Kev_Ind EMA 9–20 Bias", overlay=true)
+
+// =========================
+// EMA CALCULATIONS
+// =========================
+ema9  = ema(close, 9)
+ema20 = ema(close, 20)
+ema50 = ema(close, 50)
+ema200 = ema(close, 200)
+
+// =========================
+// EMA PLOTS
+// =========================
+plot(ema9,  title="EMA 9",  color=color.blue, linewidth=3)     // dark thick blue
+plot(ema20, title="EMA 20", color=color.red,  linewidth=2)     // mid thick red
+plot(ema50, title="EMA 50", color=#FA00D0, linewidth=1)
+plot(ema200,title="EMA 200",color=#74ff2e, linewidth=1)
+
+// =========================
+// EMA 9–20 BIAS LOGIC
+// =========================
+bullBias = ema9 > ema20
+bearBias = ema9 < ema20
+
+// =========================
+// BACKGROUND HIGHLIGHT
+// =========================
+bgColor = color.new(color.black, 100)
+
+if bullBias
+    bgColor := color.new(color.blue, 85)   // light blue
+else if bearBias
+    bgColor := color.new(color.red, 85)    // light red
+
+bgcolor(bgColor)
